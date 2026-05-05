@@ -25,6 +25,22 @@ ci::common::load_gate_config "ci/config/gate.yml"
 ci::common::load_thresholds_config "ci/config/thresholds.yml"
 
 # ---------------------------------------------------------------------------
+# Usage
+# ---------------------------------------------------------------------------
+usage() {
+  cat <<'EOF'
+Usage: ./ci/preflight.sh [options]
+
+Options:
+  --mode <quick|full|ship|debt>  Select run mode (default: quick)
+  --fix                          Run auto-fix formatting step before checks
+  --all                          Ignore incremental filtering and run all checks
+  --profile                      Show timing profile in terminal output
+  -h, --help                     Show this help text
+EOF
+}
+
+# ---------------------------------------------------------------------------
 # Argument parsing
 # ---------------------------------------------------------------------------
 MODE="quick"

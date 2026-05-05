@@ -1,0 +1,197 @@
+# Per-check enable/disable toggles and overrides.
+# severity: blocker | warning | advisory
+# required: true means fail if tool is missing (default: false = skip gracefully)
+
+checks:
+  # --- Lint ---
+  lint-shell:
+    enabled: true
+    severity: blocker
+    required: false
+    tool: shellcheck
+    timeout_sec: 60
+
+  lint-js:
+    enabled: true
+    severity: blocker
+    required: false
+    tool: eslint
+
+  lint-python:
+    enabled: true
+    severity: blocker
+    required: false
+    tool: ruff
+
+  lint-go:
+    enabled: true
+    severity: blocker
+    required: false
+    tool: golangci-lint
+
+  lint-rust:
+    enabled: true
+    severity: blocker
+    required: false
+    tool: clippy
+
+  lint-docker:
+    enabled: true
+    severity: warning
+    required: false
+    tool: hadolint
+
+  lint-yaml:
+    enabled: true
+    severity: warning
+    required: false
+    tool: yamllint
+
+  lint-markdown:
+    enabled: true
+    severity: advisory
+    required: false
+    tool: markdownlint
+
+  lint-actions:
+    enabled: true
+    severity: warning
+    required: false
+    tool: actionlint
+
+  # --- Typecheck ---
+  typecheck-js:
+    enabled: true
+    severity: blocker
+    required: false
+    tool: tsc
+
+  typecheck-python:
+    enabled: true
+    severity: warning
+    required: false
+    tool: mypy
+
+  typecheck-go:
+    enabled: true
+    severity: blocker
+    required: false
+    tool: go-vet
+
+  typecheck-rust:
+    enabled: true
+    severity: blocker
+    required: false
+    tool: cargo-check
+
+  # --- Format ---
+  format-shell:
+    enabled: true
+    severity: blocker
+    required: false
+    tool: shfmt
+
+  format-js:
+    enabled: true
+    severity: blocker
+    required: false
+    tool: prettier
+
+  format-python:
+    enabled: true
+    severity: blocker
+    required: false
+    tool: black
+
+  format-go:
+    enabled: true
+    severity: blocker
+    required: false
+    tool: gofmt
+
+  format-rust:
+    enabled: true
+    severity: blocker
+    required: false
+    tool: rustfmt
+
+  # --- Tests ---
+  tests-js:
+    enabled: true
+    severity: blocker
+    required: false
+
+  tests-python:
+    enabled: true
+    severity: blocker
+    required: false
+
+  tests-go:
+    enabled: true
+    severity: blocker
+    required: false
+
+  tests-rust:
+    enabled: true
+    severity: blocker
+    required: false
+
+  tests-shell:
+    enabled: true
+    severity: blocker
+    required: false
+    tool: bats
+
+  # --- Coverage ---
+  coverage:
+    enabled: true
+    severity: warning
+    required: false
+
+  # --- Security/SAST ---
+  sast:
+    enabled: true
+    severity: blocker
+    required: false
+
+  # --- Secrets ---
+  secrets:
+    enabled: true
+    severity: blocker
+    required: false
+
+  # --- License ---
+  license:
+    enabled: true
+    severity: warning
+    required: false
+
+  # --- Supply Chain ---
+  supply-chain:
+    enabled: true
+    severity: warning
+    required: false
+
+  # --- Container ---
+  container:
+    enabled: true
+    severity: warning
+    required: false
+
+  # --- IaC ---
+  iac:
+    enabled: true
+    severity: warning
+    required: false
+
+  # --- Commit hygiene ---
+  commit-hygiene:
+    enabled: true
+    severity: blocker
+    required: false
+
+  # --- Branch protection simulation ---
+  branch-protection:
+    enabled: true
+    severity: blocker
+    required: false

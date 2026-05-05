@@ -1,0 +1,80 @@
+name: Release
+
+on:
+  push:
+    paths:
+      - 'ci/VERSION'
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Read VERSION
+        id: version
+        run: |
+          VERSION="$(cat ci/VERSION 2>/dev/null | tr -d '[:space:]')"
+          if [ -z "$VERSION" ]; then
+            echo "No VERSION file or empty" >&2
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Check if tag already exists
+        id: check_tag
+        run: |
+          if git tag --list "v${{ steps.version.outputs.version }}" | grep -q .; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Generate changelog from conventional commits
+        id: changelog
+        if: steps.check_tag.outputs.exists == 'false'
+        run: |
+          # Get last tag
+          LAST_TAG="$(git describe --tags --abbrev=0 2>/dev/null || echo '')"
+          
+          {
+            echo "# Changelog"
+            echo ""
+            echo "## ${{ steps.version.outputs.tag }}"
+            echo ""
+            if [ -n "$LAST_TAG" ]; then
+              git log "${LAST_TAG}..HEAD" --pretty=format:"- %s (%h)" --no-merges | grep -E '^- (feat|fix|docs|refactor|perf|build|ci|chore)\b' || true
+            else
+              git log --pretty=format:"- %s (%h)" --no-merges | head -50 | grep -E '^- (feat|fix|docs|refactor|perf|build|ci|chore)\b' || true
+            fi
+          } > changelog.md
+          
+          echo "changelog<<EOF" >> "$GITHUB_OUTPUT"
+          cat changelog.md >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release
+        if: steps.check_tag.outputs.exists == 'false'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.repos.createRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag_name: '${{ steps.version.outputs.tag }}',
+              name: 'Release ${{ steps.version.outputs.tag }}',
+              body: `${{ steps.changelog.outputs.changelog }}`,
+              draft: false,
+              prerelease: false,
+            });

@@ -1,0 +1,120 @@
+name: CI Gate Self-Test
+
+on:
+  schedule:
+    - cron: '0 6 * * *'  # Daily at 6 AM UTC
+  push:
+    paths:
+      - 'ci/**'
+      - '.githooks/**'
+      - '.github/workflows/self-test.yml'
+      - 'Makefile'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  self-test:
+    name: Self-Test
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install shellcheck
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q shellcheck
+
+      - name: Install shfmt
+        run: |
+          curl -sSfL https://github.com/mvdan/sh/releases/download/v3.7.0/shfmt_v3.7.0_linux_amd64 -o /usr/local/bin/shfmt
+          chmod +x /usr/local/bin/shfmt
+
+      - name: Install bats
+        run: |
+          git clone --depth 1 https://github.com/bats-core/bats-core.git /tmp/bats
+          sudo /tmp/bats/install.sh /usr/local || true
+          # Fallback: try npm
+          npm install -g bats 2>/dev/null || true
+
+      - name: bash -n syntax check (all CI scripts)
+        run: |
+          failed=0
+          for f in ci/*.sh ci/checks/*.sh ci/lib/*.sh ci/hook-dispatch.sh \
+              .githooks/pre-push .githooks/pre-commit .githooks/commit-msg \
+              .githooks/prepare-commit-msg; do
+            [ -f "$f" ] || continue
+            if ! bash -n "$f" 2>&1; then
+              echo "SYNTAX ERROR: $f" >&2
+              failed=1
+            fi
+          done
+          [ "$failed" -eq 0 ] || exit 1
+
+      - name: shellcheck (all CI scripts)
+        run: |
+          targets=()
+          for f in ci/*.sh ci/checks/*.sh ci/lib/*.sh ci/hook-dispatch.sh \
+              .githooks/pre-push .githooks/pre-commit .githooks/commit-msg \
+              .githooks/prepare-commit-msg; do
+            [ -f "$f" ] && targets+=("$f")
+          done
+          if [ "${#targets[@]}" -gt 0 ]; then
+            shellcheck -x -e SC1090,SC1091,SC1094 "${targets[@]}"
+          fi
+
+      - name: shfmt formatting check
+        run: |
+          if command -v shfmt >/dev/null 2>&1; then
+            targets=()
+            for f in ci/*.sh ci/checks/*.sh ci/lib/*.sh ci/hook-dispatch.sh; do
+              [ -f "$f" ] && targets+=("$f")
+            done
+            if [ "${#targets[@]}" -gt 0 ]; then
+              # Advisory: show formatting diffs but don't fail the build for style-only issues
+              shfmt -d -i 2 -ci "${targets[@]}" || true
+            fi
+          else
+            echo "shfmt not available, skipping format check"
+          fi
+
+      - name: make -n (all documented targets)
+        run: |
+          make -n verify ci-quick ci-full ci-ship ci-debt impact test-plan smart \
+            install-hooks ci-self-test ci-all ci-fix ci-profile docs bats lint-ci
+          make -n ship MESSAGE=test-msg
+
+      - name: Run CI self-test suite
+        run: bash ci/self-test.sh
+
+      - name: Run bats test suite
+        run: |
+          if command -v bats >/dev/null 2>&1 && [ -d ci/tests ]; then
+            bats ci/tests/ || true
+          else
+            echo "bats not available or ci/tests/ missing; skipping"
+          fi
+
+      - name: End-to-end smoke test (no-args preflight exits 0)
+        run: |
+          out="$(./ci/preflight.sh 2>&1)"
+          rc=$?
+          echo "$out"
+          if [ $rc -ne 0 ]; then
+            echo "FAIL: ./ci/preflight.sh exited $rc — expected 0 on clean tree" >&2
+            exit 1
+          fi
+          if echo "$out" | grep -q "ERROR: preflight failed at line"; then
+            echo "FAIL: ERR trap noise detected in preflight output" >&2
+            exit 1
+          fi
+
+      - name: End-to-end smoke test (--mode quick exits 0)
+        run: |
+          ./ci/preflight.sh --mode quick
+          echo "preflight --mode quick: OK"

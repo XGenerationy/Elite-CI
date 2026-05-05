@@ -1,0 +1,140 @@
+name: CI Gate
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  security-events: write
+  pull-requests: write
+  checks: write
+
+jobs:
+  preflight:
+    name: preflight
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 0
+
+      - name: Restore CI gate cache
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ~/.cache/ci-gate
+          key: ci-gate-${{ runner.os }}-${{ hashFiles('ci/config/**', 'ci/checks/**', 'ci/lib/**') }}
+          restore-keys: |
+            ci-gate-${{ runner.os }}-
+
+      - name: Install optional tools (Ubuntu)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q shellcheck || true
+          # Install shfmt
+          curl -sSfL https://github.com/mvdan/sh/releases/download/v3.7.0/shfmt_v3.7.0_linux_amd64 -o /usr/local/bin/shfmt 2>/dev/null && chmod +x /usr/local/bin/shfmt || true
+          # Install actionlint
+          bash <(curl -sSf https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash) 2>/dev/null || true
+          sudo mv actionlint /usr/local/bin/ 2>/dev/null || true
+
+      - name: Install optional tools (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew install shellcheck shfmt 2>/dev/null || true
+
+      - name: Run CI preflight gate
+        id: preflight
+        run: |
+          bash ci/preflight.sh --all --mode full
+        env:
+          CI: "true"
+          CI_GATE_CACHE_DIR: ~/.cache/ci-gate
+          CI_GATE_PARALLEL: "4"
+
+      - name: Upload SARIF to GitHub Code Scanning
+        if: always() && runner.os == 'Linux' && hashFiles('ci/reports/sarif.json') != ''
+        uses: github/codeql-action/upload-sarif@0daab03d71ff584ef619d027a3fd9146679c5d84 # v3
+        with:
+          sarif_file: ci/reports/sarif.json
+        continue-on-error: true
+
+      - name: Upload JUnit test results
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: junit-${{ matrix.os }}
+          path: ci/reports/junit.xml
+          if-no-files-found: ignore
+
+      - name: Upload HTML report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ci-report-${{ matrix.os }}
+          path: ci/reports/index.html
+          if-no-files-found: ignore
+
+      - name: Upload full reports
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ci-reports-${{ matrix.os }}
+          path: ci/reports/
+          if-no-files-found: ignore
+
+      - name: Comment PR with summary
+        if: github.event_name == 'pull_request' && runner.os == 'Linux'
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        with:
+          script: |
+            const fs = require('fs');
+            let summary = '';
+            try {
+              summary = fs.readFileSync('ci/reports/summary.md', 'utf8');
+            } catch (e) {
+              summary = '> CI gate report not available.';
+            }
+
+            const header = `## 🚦 CI Gate Report (${process.env.RUNNER_OS})\n\n`;
+            const body = header + summary.substring(0, 60000); // GitHub comment limit
+
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const existingComment = comments.find(c =>
+              c.user.login === 'github-actions[bot]' &&
+              c.body.includes('CI Gate Report')
+            );
+
+            if (existingComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existingComment.id,
+                body: body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: body,
+              });
+            }
+        continue-on-error: true

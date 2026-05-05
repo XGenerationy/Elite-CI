@@ -1,0 +1,26 @@
+# .ci-gateignore - paths skipped by the CI gate
+# gitignore-style patterns
+
+# Dependencies
+node_modules/
+.venv/
+venv/
+vendor/
+
+# Build artifacts
+dist/
+build/
+coverage/
+htmlcov/
+target/
+*.egg-info/
+
+# Caches
+.mypy_cache/
+.pytest_cache/
+__pycache__/
+*.pyc
+.cargo/
+
+# Generated files
+*.lock.bak

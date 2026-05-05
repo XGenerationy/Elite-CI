@@ -210,3 +210,5 @@ See [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md). Open source under Apache 2.0.
 **Built with bash. Powered by discipline.**
 
 [GitHub](https://github.com/XGenerationy/local-self-hosted-ci-gate) · [License](LICENSE) · [Changelog](CHANGELOG.md) · [Architecture](docs/ARCHITECTURE.md)
+
+P0 bugs fixed: changeset.sh, cache.sh, affected.sh, preflight.sh

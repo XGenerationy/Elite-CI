@@ -694,12 +694,11 @@ JUNIT_XML="${CI_REPORT_DIR}/junit.xml"
   _pass_count="${#COMMANDS_PASSED[@]}"
   _fail_count="${#COMMANDS_FAILED[@]}"
   _total_count="${#COMMANDS_RUN[@]}"
-  printf '<?xml version="1.0" encoding="UTF-8"?>
-'
-  printf '<testsuites name="ci-gate-%s" tests="%d" failures="%d" time="%d">
-'     "$MODE" "$_total_count" "$_fail_count" "$DURATION_SEC"
-  printf '  <testsuite name="ci-gate-%s" tests="%d" failures="%d" time="%d">
-'     "$MODE" "$_total_count" "$_fail_count" "$DURATION_SEC"
+  printf '<?xml version="1.0" encoding="UTF-8"?>\n'
+  printf '<testsuites name="ci-gate-%s" tests="%d" failures="%d" time="%d">\n' \
+    "$MODE" "$_total_count" "$_fail_count" "$DURATION_SEC"
+  printf '  <testsuite name="ci-gate-%s" tests="%d" failures="%d" time="%d">\n' \
+    "$MODE" "$_total_count" "$_fail_count" "$DURATION_SEC"
   _juidx=0
   while [ "$_juidx" -lt "${#_TIMING_LABELS[@]}" ]; do
     _julabel="${_TIMING_LABELS[$_juidx]}"
@@ -708,22 +707,16 @@ JUNIT_XML="${CI_REPORT_DIR}/junit.xml"
     _jurc="${_TIMING_RESULTS[$_juidx]}"
     _judur=$(( _juend - _justart ))
     if [ "$_jurc" -eq 0 ] || [ "$_jurc" -eq 10 ]; then
-      printf '    <testcase name="%s" time="%d"/>
-' "$_julabel" "$_judur"
+      printf '    <testcase name="%s" time="%d"/>\n' "$_julabel" "$_judur"
     else
-      printf '    <testcase name="%s" time="%d">
-' "$_julabel" "$_judur"
-      printf '      <failure message="Check %s failed with exit code %d"/>
-' "$_julabel" "$_jurc"
-      printf '    </testcase>
-'
+      printf '    <testcase name="%s" time="%d">\n' "$_julabel" "$_judur"
+      printf '      <failure message="Check %s failed with exit code %d"/>\n' "$_julabel" "$_jurc"
+      printf '    </testcase>\n'
     fi
     _juidx=$(( _juidx + 1 ))
   done
-  printf '  </testsuite>
-'
-  printf '</testsuites>
-'
+  printf '  </testsuite>\n'
+  printf '</testsuites>\n'
 } > "$JUNIT_XML"
 
 # ---- sarif.json ----

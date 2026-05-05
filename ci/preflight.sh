@@ -34,7 +34,16 @@ RUN_PROFILE=0
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
+    -h|--help)
+      usage
+      exit 0
+      ;;
     --mode)
+      if [ "$#" -lt 2 ]; then
+        echo "ERROR: --mode requires a value" >&2
+        usage >&2
+        exit 1
+      fi
       MODE="$2"
       shift 2
       ;;
@@ -51,7 +60,8 @@ while [ "$#" -gt 0 ]; do
       shift
       ;;
     *)
-      echo "Unknown option: $1"
+      echo "Unknown option: $1" >&2
+      usage >&2
       exit 1
       ;;
   esac

@@ -391,7 +391,7 @@ ci::changeset::emit_json() {
     fi
   done
 
-  cat > "$CI_CHANGESET_JSON" <<EOF
+cat > "$CI_CHANGESET_JSON" <<EOF
 {
   "mode": "$_CI_CHANGESET_MODE",
   "generated_at": "$ts",

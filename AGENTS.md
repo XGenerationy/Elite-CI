@@ -213,5 +213,20 @@ Claims without evidence will be rejected.
 
 ---
 
+## 13. Never restore files without explicit request
+
+The agent must **never** restore, revert, or overwrite files from git history, backups, or any other source without the user explicitly requesting it in writing.
+
+```text
+git checkout -- <file>           # FORBIDDEN without approval
+git restore <file>               # FORBIDDEN without approval
+cp <backup> <file>               # FORBIDDEN without approval
+any action that overwrites user data  # FORBIDDEN without approval
+```
+
+If files are accidentally deleted, corrupted, or emptied, the agent must **report the problem and ask for permission** before attempting recovery. The user's data and explicit consent take absolute priority.
+
+---
+
 *Version: 1.0*
 *Applies to: all agents working on local-self-hosted-ci-gate*

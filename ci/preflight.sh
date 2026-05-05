@@ -787,7 +787,6 @@ printf '}
 # ---- HTML dashboard (index.html) ----
 INDEX_HTML="${CI_REPORT_DIR}/index.html"
 {
-  # Build check rows
   _html_rows=""
   _hridx=0
   while [ "$_hridx" -lt "${#_TIMING_LABELS[@]}" ]; do
@@ -804,8 +803,14 @@ INDEX_HTML="${CI_REPORT_DIR}/index.html"
     esac
     _log_file="${CI_REPORT_DIR}/${_hrlabel}.log"
     _log_content=""
-    [ -f "$_log_file" ] && _log_content="$(sed       -e 's/&/\&amp;/g'       -e 's/</\&lt;/g'       -e 's/>/\&gt;/g'       -e 's/"/\&quot;/g'       -e "s/'/\&#39;/g"       "$_log_file" 2>/dev/null || true)"
-    _html_rows="${_html_rows}<tr class="${_hrclass}"><td>${_hrlabel}</td><td>${_hrstatus}</td><td>${_hrdur}s</td><td><details><summary>show log</summary><pre>${_log_content}</pre></details></td></tr>"
+    [ -f "$_log_file" ] && _log_content="$(sed \
+      -e 's/&/\&amp;/g' \
+      -e 's/</\&lt;/g' \
+      -e 's/>/\&gt;/g' \
+      -e 's/"/\&quot;/g' \
+      -e "s/'/\&#39;/g" \
+      "$_log_file" 2>/dev/null || true)"
+    _html_rows="${_html_rows}<tr class=\"${_hrclass}\"><td>${_hrlabel}</td><td>${_hrstatus}</td><td>${_hrdur}s</td><td><details><summary>show log</summary><pre>${_log_content}</pre></details></td></tr>"
     _hridx=$(( _hridx + 1 ))
   done
 
